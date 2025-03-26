@@ -147,7 +147,8 @@ namespace Aliyun.Credentials.Http
             string clientVersion = GetRuntimeRegexValue(RuntimeEnvironment.GetRuntimeDirectory());
             string version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
-            string defaultUserAgent = string.Format("AlibabaCloud ({0}) {1} Credentials/{2} TeaDSL/1",
+            string defaultUserAgent = string.Format("{0} ({1}) {2} Credentials/{3} TeaDSL/1",
+                Configure.Constants.UserAgentPrefix,
                 osVersion,
                 clientVersion,
                 version

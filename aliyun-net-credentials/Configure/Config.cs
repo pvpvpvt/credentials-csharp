@@ -3,18 +3,20 @@ namespace Aliyun.Credentials.Configure
     public static class Constants
     {
         public const string DefaultProfileName = "default";
-        public const string StsDefaultEndpoint = "sts.aliyuncs.com";
-        public const string DomainSuffix = "aliyuncs.com";
+        public const string StsDefaultEndpoint = "{{sts_default_endpoint}}";
+        public const string DomainSuffix = "{{endpoint_suffix}}";
+        public const string UserAgentPrefix = "{{user_agent_prefix}}";
         public const string DefaultRegion = "cn-hangzhou";
-        public const string ConfigStorePath = ".aliyun";
-        public const string EnvPrefix = "ALIBABA_CLOUD_";
+        public const string ConfigStorePath = "{{config_path}}";
+        public const string EnvPrefix = "{{env_prefix}}";
 
         public const string ECSIMDSSecurityCredURL =
-            "http://100.100.100.200/latest/meta-data/ram/security-credentials/";
+            "http://{{metadata_host}}/latest/meta-data/ram/security-credentials/";
 
-        public const string ECSIMDSSecurityCredTokenURL = "http://100.100.100.200/latest/api/token";
-        public const string ECSIMDSHeaderPrefix = "X-aliyun-";
-        public const string PATHCredentialFile = ".alibabacloud";
-        public const string CloudMarkerUpperCaseForSub = "ALICLOUD";
+        public const string ECSIMDSSecurityCredTokenURL = "http://{{metadata_host}}/latest/api/token";
+        public const string ECSIMDSHeaderPrefix = "{{imds_header_prefix}}";
+        public const string PATHCredentialFile = "{{credential_file_path}}";
+        public const string SignPrefix = "{{sign_prefix}}";
+        public const string SignatureTypePrefix = "{{signature_type_prefix}}";
     }
 }
