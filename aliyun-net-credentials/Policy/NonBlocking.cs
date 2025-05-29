@@ -1,13 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Aliyun.Credentials.Logging;
 
 namespace Aliyun.Credentials.Policy
 {
     public class NonBlocking : IPrefetchStrategy
     {
-        private static readonly ILog Logger = LogProvider.For<NonBlocking>();
 
         private const int MaxConcurrentRefreshes = 100;
 
@@ -27,7 +25,6 @@ namespace Aliyun.Credentials.Policy
             // 判断是否存在可用的资源
             if (!concurrentRefreshLeases.Wait(0))
             {
-                Logger.Warn("Skipping a background refresh task because there are too many other tasks running.");
                 // 将状态重置为 false
                 Interlocked.Exchange(ref currentlyRefreshing, 0);
                 return;
@@ -43,7 +40,6 @@ namespace Aliyun.Credentials.Policy
                     }
                     catch (Exception ex)
                     {
-                        Logger.Warn(ex.Message);
                         throw;
                     }
                     finally
@@ -57,7 +53,6 @@ namespace Aliyun.Credentials.Policy
             {
                 concurrentRefreshLeases.Release();
                 Interlocked.Exchange(ref currentlyRefreshing, 0);
-                Logger.Warn(ex.Message);
                 throw;
             }
         }
@@ -72,7 +67,6 @@ namespace Aliyun.Credentials.Policy
             // 判断是否存在可用的资源
             if (!await concurrentRefreshLeases.WaitAsync(0))
             {
-                Logger.Warn("Skipping a background refresh task because there are too many other tasks running.");
                 // 将状态重置为 false
                 Interlocked.Exchange(ref currentlyRefreshing, 0);
                 return;
@@ -87,7 +81,6 @@ namespace Aliyun.Credentials.Policy
                     }
                     catch (Exception ex)
                     {
-                        Logger.Warn(ex.Message);
                         throw;
                     }
                     finally
@@ -99,7 +92,6 @@ namespace Aliyun.Credentials.Policy
             }
             catch (Exception ex)
             {
-                Logger.Warn(ex.Message);
                 concurrentRefreshLeases.Release();
                 Interlocked.Exchange(ref currentlyRefreshing, 0);
                 throw;

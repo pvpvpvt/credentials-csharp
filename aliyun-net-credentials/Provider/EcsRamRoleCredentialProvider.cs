@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using Aliyun.Credentials.Exceptions;
 using Aliyun.Credentials.Http;
-using Aliyun.Credentials.Logging;
 using Aliyun.Credentials.Models;
 using Aliyun.Credentials.Policy;
 using Aliyun.Credentials.Utils;
@@ -18,7 +17,6 @@ namespace Aliyun.Credentials.Provider
     /// </summary>
     public class EcsRamRoleCredentialProvider : SessionCredentialsProvider, IDisposable
     {
-        private static readonly ILog Logger = LogProvider.For<EcsRamRoleCredentialProvider>();
 
         private const int AsyncRefreshIntervalTimeMinutes = 1;
         private volatile bool shouldRefresh;
@@ -80,14 +78,11 @@ namespace Aliyun.Credentials.Provider
             try
             {
                 if (!this.shouldRefresh) return;
-                Logger.Info("Begin checking or refreshing credentials asynchronously");
                 // 这里使用同步方法来刷新，因为 Timer.Elapsed 事件的处理程序是在一个线程池线程而非主线程上执行
                 GetCredentials();
             }
             catch (Exception ex)
             {
-                Logger.Warn(string.Format("Failed when checking or refreshing credentials asynchronously, error: {0}.",
-                    ex.Message));
             }
         }
 

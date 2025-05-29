@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Aliyun.Credentials.Exceptions;
-using Aliyun.Credentials.Logging;
 using Aliyun.Credentials.Policy;
 using Aliyun.Credentials.Utils;
 
@@ -10,7 +9,6 @@ namespace Aliyun.Credentials.Provider
 {
     public class RefreshCachedSupplier<T>
     {
-        private static readonly ILog Logger = LogProvider.For<RefreshCachedSupplier<T>>();
         private const long StaleTime = 15 * 60 * 1000;
 
         /// <summary>
@@ -60,13 +58,10 @@ namespace Aliyun.Credentials.Provider
         {
             if (CacheIsStale())
             {
-                Logger.Debug("Refreshing credentials synchronously");
                 RefreshCache();
             }
             else if (ShouldInitiateCachePrefetch())
             {
-                Logger.Debug("Prefetching credentials, using prefetch strategy: {0}",
-                    this.prefetchStrategy.ToString());
                 PrefetchCache();
             }
 
@@ -77,13 +72,10 @@ namespace Aliyun.Credentials.Provider
         {
             if (CacheIsStale())
             {
-                Logger.Debug("Refreshing credentials synchronously");
                 await RefreshCacheAsync();
             }
             else if (ShouldInitiateCachePrefetch())
             {
-                Logger.Debug("Prefetching credentials, using prefetch strategy: {0}",
-                    this.prefetchStrategy.ToString());
                 await PrefetchCacheAsync();
             }
 
@@ -143,31 +135,19 @@ namespace Aliyun.Credentials.Provider
 
         private RefreshResult<T> HandleFetchedSuccess(RefreshResult<T> value)
         {
-            Logger.Debug(string.Format("Refresh credentials successfully, retrieved value is {0}, cached value is {1}",
-                value, this.cachedValue));
             Interlocked.Exchange(ref consecutiveRefreshFailures, 0);
             var now = DateTime.UtcNow.GetTimeMillis();
             // 过期时间大于15分钟，不用管
             if (now < value.StaleTime)
             {
-                Logger.Debug(string.Format("Retrieved value stale time is {0}. Using staleTime of {1}",
-                    ParameterHelper.FormatIso8601Date(value.StaleTime),
-                    ParameterHelper.FormatIso8601Date(value.StaleTime)));
                 return value;
             }
 
             // 不足或等于15分钟，但未过期，下次会再次刷新
             if (now < value.StaleTime + StaleTime)
             {
-                Logger.Warn(string.Format("Retrieved value stale time is %s in the past ({0}). Using staleTime of {1}",
-                    ParameterHelper.FormatIso8601Date(value.StaleTime),
-                    ParameterHelper.FormatIso8601Date(now)));
                 return value.ToBuilder().StaleTime(now).Build();
             }
-
-            Logger.Warn(string.Format(
-                "Retrieved value expiration time of the credential is in the past ({0}). Trying use the cached value.",
-                ParameterHelper.FormatIso8601Date(value.StaleTime + StaleTime)));
 
             // 已过期，看缓存，缓存若大于15分钟，返回缓存，若小于15分钟，则根据策略判断是立刻重试还是稍后重试
             if (this.cachedValue == null)
@@ -176,9 +156,6 @@ namespace Aliyun.Credentials.Provider
             }
             if (now < this.cachedValue.StaleTime)
             {
-                Logger.Warn(string.Format("Cached value staleTime is {0}. Using staleTime of {1}",
-                    ParameterHelper.FormatIso8601Date(this.cachedValue.StaleTime),
-                    ParameterHelper.FormatIso8601Date(this.cachedValue.StaleTime)));
                 return this.cachedValue;
             }
 
@@ -186,17 +163,11 @@ namespace Aliyun.Credentials.Provider
             {
                 case StaleValueBehavior.Strict:
                     // 立马重试
-                    Logger.Warn(string.Format(
-                        "Cached value expiration is in the past ({0}). Using expiration of {1}",
-                        value.StaleTime, now + 1000));
                     return this.cachedValue.ToBuilder().StaleTime(now + 1000).Build();
                 case StaleValueBehavior.Allow:
                     //一分钟左右重试一次
                     var waitUntilNextRefresh = 50 * 1000 + jitter.Next(20 * 1000 + 1);
                     var nextRefreshTime = now + waitUntilNextRefresh;
-                    Logger.Warn(string.Format(
-                        "Cached value expiration has been extended to {0} because the downstream service returned a time in the past: {1}",
-                        nextRefreshTime, value.StaleTime));
                     return this.cachedValue.ToBuilder().StaleTime(nextRefreshTime).Build();
                 default:
                     throw new ArgumentException(string.Format("Unknown stale-value-behavior: {0}",
@@ -206,11 +177,9 @@ namespace Aliyun.Credentials.Provider
 
         private RefreshResult<T> HandleFetchedFailure(Exception exception)
         {
-            Logger.Warn(string.Format("Refresh credentials failed, cached value is {0}, exception is {1}", this.cachedValue, exception));
             var currentCachedValue = this.cachedValue;
             if (currentCachedValue == null)
             {
-                Logger.Error(exception.Message);
                 throw exception;
             }
 
@@ -228,9 +197,6 @@ namespace Aliyun.Credentials.Provider
                 case StaleValueBehavior.Allow:
                     // 采用退避算法，立刻重试
                     var newStaleTime = JitterTime(now, 1000, MaxStaleFailureJitter(numFailures));
-                    Logger.Warn(string.Format(
-                        "Cached value expiration has been extended to {0} because calling the downstream service failed (consecutive failures: {1}).",
-                        newStaleTime, numFailures));
                     return currentCachedValue.ToBuilder().StaleTime(newStaleTime).Build();
                 default:
                     throw new ArgumentException(string.Format("Unknown stale-value-behavior: {0}",
